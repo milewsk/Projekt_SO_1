@@ -27,13 +27,13 @@ Sprawdzanie folderów. Pozycje które nie są zwykłymi plikami są ignorowane (
 
 int main(int argc, char* argv[])
 {
-    if (argc < 5)
+    if (argc < 2)
     {
-        printf("Zbyt mala liczba argumentow wejsciowych!");
         syslog(LOG_ERR, "Zbyt mala liczba argumentow wejsciowych!");
         exit(EXIT_FAILURE);
     }
     
+/*zainicjowanie zmiennych pod proces*/
     pid_t pid, sid;
     int i;
     
@@ -46,9 +46,9 @@ int main(int argc, char* argv[])
 
     umask(0);
 
-    sid = setsid();
+   
     /*Nowa sesja i grupa procesów*/
-    if (setsid() == -1)
+    if ((sid = setsid()) == -1)
         return -1;
 
     /*Ustaw katalog roboczy na główny*/
@@ -64,12 +64,22 @@ int main(int argc, char* argv[])
     dup(0);
     dup(0);
 
+    /*
+    Inicjalizacja podstawowych parametrów do pracy demona: 
+    -ustawienie rekurencji na false
+    - ustawienie domyślnego czasu uśpienia
+    - domyślnego rozmiaru pliku (capacity)
+    - inicjalizacja pustych wskaźników przechowujących w przyszłości ścieżki do folderów
+    
+    Struct stat - pozwala nam na wydobywanie informacji o danym folderze/pliku
+    */
+    
     int choice = 0;
     bool recursion = false;
     char *in, *out;
     int capacity = 1024;
     int sleep = 300; //300, gdyż w zadaniu podane jest 5 minut bazowe czyli 300 sekund.
-    char *directory_path1=NULL, *directory_path2=NULL;
+    char *directory_path1 = NULL, *directory_path2 = NULL;
     struct stat s;
 
     /*Tutaj menu dla demona z funkcjami*/
@@ -77,49 +87,61 @@ int main(int argc, char* argv[])
     {
         switch (choice)
         {
-        case 's': //argument z nowa wartoscia spania demona
+        /*Argument opcjonalny: Zmiana czasu uśpienia*/
+        case 's': 
+                //convert
             sleep = atoi(optarg);
             break;
-
+        /*Argument i - scieżka do folderu wejściowego */
         case 'i':
             in = optarg;
             if (stat(in, &s) == 0)
             {
-                if (s.st_mode & S_IFDIR) //sciezka jest katalogiem
+                //IFDIR - Sprawdzenie czy obiekt jest folderem
+                
+                // jeśli st_mode == IFdir, jeśli okej przypisz podany argument do zmiennej
+                if (S_IFDIR(s.st_mode)) //lub s.st_mode & S_IFDIR
                 {
                     directory_path1 = optarg;
                 }
-                else //sciezka nie jest katalogiem, wywal blad
+                //nie jest katalogiem
+                else 
                 {
-                    printf("-i: Podany argument nie jest folderem");
-                    syslog(LOG_ERR, "Podany argument nie jest folderem");
+                    syslog(LOG_ERR, "Podany argument 'i' nie jest folderem");
                     exit(EXIT_FAILURE);
                 }
             }
             break;
-
+        /*Argument o - scieżka do folderu wyjściowego, miejsce docelowe */
         case 'o':
             out = optarg;
+                
             if (stat(out, &s) == 0)
             {
-                if (s.st_mode & S_IFDIR) //sciezka jest katalogiem
+                //sprawdzenie czy obiekt jest katalogiem, jeśli okej przypisz podany argument do zmiennej
+                if (S_IFDIR(s.st_mode)) 
                 {
                     directory_path2 = optarg;
                 }
-                else //sciezka nie jest katalogiem, wywal blad
+                // S_IFDIR - false
+                //nie jest katalogiem
+                else 
                 {
-                    printf("-o: Podany argument nie jest folderem");
                     syslog(LOG_ERR, "Podany argument nie jest folderem");
                     exit(EXIT_FAILURE);
                 }
             }
             break;
-
+                
+/*Argument opcjonalny: Zmiana trybu na rekurencyjny*/
         case 'r':
+                //zmiana wartości na true
             recursion = true;
             break;
-
+                
+ /*Argument opcjonalny: Zmiana rozmiaru*/
         case 'c':
+                //covert
             capacity = atoi(optarg);
             break;
         }
