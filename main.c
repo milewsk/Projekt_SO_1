@@ -54,6 +54,29 @@ time_t FileModificationData(const char* in)
     return time.st_mtime;
 }
 
+void ChangeMod(char* in, char* out)
+{
+    struct utimbuf time;
+    time.actime = 0; ///* The new access time. access time - The last time the file was accessed/opened by some command or application*/
+    time.modtime = FileModificationTime(in);/* The new modification time (modify time) - The last time the file's content was modified. */
+    if (utime(out, &time) != 0)
+    {
+        syslog(LOG_ERR, "Blad zmiany daty!");
+        exit(EXIT_FAILURE);
+    }
+    mode_t OldFile = FileTypeMode(in);
+    if (chmod(out, OldFile) != 0)
+    {
+        syslog(LOG_ERR, "Blad ustawienia uprawnien!");
+        exit(EXIT_FAILURE);
+    }
+}
+/*Return Value
+0
+utime() was successful. The file access and modification times are changed.
+-1
+utime() was not successful. The file times are not changed. The errno global variable is set to indicate the error.*/
+
 
 
 int main(int argc, char* argv[])
