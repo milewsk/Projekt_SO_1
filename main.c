@@ -109,7 +109,7 @@ int main(int argc, char* argv[])
     bool recursion = false;
     char *in, *out;
     int capacity = 1024;
-    int sleep = 300; //300, gdyż w zadaniu podane jest 5 minut bazowe czyli 300 sekund.
+    int sleep_time = 300; //300, gdyż w zadaniu podane jest 5 minut bazowe czyli 300 sekund.
     char *directory_path1 = NULL, *directory_path2 = NULL;
     struct stat s;
 
@@ -120,7 +120,7 @@ int main(int argc, char* argv[])
         /*Argument opcjonalny: Zmiana czasu uśpienia*/
         case 's': 
                 //convert
-            sleep = atoi(optarg);
+            sleep_time = atoi(optarg);
             break;
         /*Argument i - scieżka do folderu wejściowego */
         case 'i':
@@ -130,7 +130,7 @@ int main(int argc, char* argv[])
                 //IFDIR - Sprawdzenie czy obiekt jest folderem
                 
                 // jeśli st_mode == IFdir, jeśli okej przypisz podany argument do zmiennej
-                if (S_IFDIR(s.st_mode)) //lub s.st_mode & S_IFDIR
+                if (S_IFDIR(s.st_mode) != 0) //lub s.st_mode & S_IFDIR
                 {
                     directory_path1 = optarg;
                 }
@@ -149,7 +149,7 @@ int main(int argc, char* argv[])
             if (stat(out, &s) == 0)
             {
                 //sprawdzenie czy obiekt jest katalogiem, jeśli okej przypisz podany argument do zmiennej
-                if (S_IFDIR(s.st_mode)) 
+                if (S_IFDIR(s.st_mode) != 0) 
                 {
                     directory_path2 = optarg;
                 }
@@ -176,5 +176,36 @@ int main(int argc, char* argv[])
             break;
         }
     }
+    
+    
+    //ciągła pętla while podczas działania deamona
+    while(1)
+    {
+        //potrzebne do funkcji: scieżki, rozmiar rekurencja true/false
+        
+        //usuwanie
+        // program porównuje folder 2 z folderem 1
+        // jeśli napotka niepotrzebne, niezgodne pliki usunie je
+        
+        
+        //porównanie
+        // program porównuje folder 1 i drugi
+        // dodaje brakujące pliki i foldery
+        
+        
+        
+        //odpoczynek na czas 'sleep_time'
+        syslog(LOG_INFO,"Synchronizacja wykonana, pora odpocząć...")
+        
+        //przebudzienie
+            // sleep()
+        if(sleep(sleep_time) == 0)
+        {
+            syslog(LOG_INFO,"Przebudzenie programu");
+        }
+        
+    }
+    
+    
 
 }
