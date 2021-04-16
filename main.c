@@ -118,6 +118,43 @@ void copy_(char *in, char *out)
     syslog(LOG_INFO, "Kopiowanie udane! Skopiowano %s", in);
 }
 
+void Map(char* in, char* out)
+{
+    /* mmap() creates a new mapping in the virtual address space of the
+       calling process.  The starting address for the new mapping is
+       specified in addr.  The length argument specifies the length of
+       the mapping (which must be greater than 0).*/
+    int size = FileSize(in);
+    int FileInput = open(in, O_RDONLY); //O_RDONLY Open for reading only.
+    int FileOutput = open(out, O_CREAT | O_WRONLY | O_TRUNC, 0644); /*If the file exists, this flag has no effect except as noted under O_EXCL below. Otherwise, the file shall be created O_WRONLY
+    Open for writing only. If the file exists and is a regular file, and the file is successfully opened O_RDWR or O_WRONLY, its length shall be truncated to 0, and the mode and owner shall be unchanged.*/
+
+    if (FileInput == -1 || FileOutput == -1)
+    {
+        syslog(LOG_ERR, "Blad otwarcia ktoregos z pliku!");
+        exit(EXIT_FAILURE);
+    }
+    /*mmap() creates a new mapping in the virtual address space of the calling process.*/
+    char* mapowanie = (char*)mmap(0, size, PROT_READ, MAP_SHARED | MAP_FILE, FileInput, 0);
+    /*PROT_READ
+              Pages may be read.
+
+      MAP_SHARED
+              Share this mapping.  Updates to the mapping are visible to
+              other processes mapping the same region
+
+      MAP_FILE
+              Compatibility flag.*/
+
+    write(FileOutput, mapowanie, size);
+    //Mapowanie w miejsce buffora
+    close(FileInput);
+    close(FileOutput);
+    munmap(mapowanie, size); //usuwanie mapy z paamieci;
+    ChangeMod(in, out); //Zmiana daty modyfikacji, tak aby przy kolejnym obudzeniu nie trzeba było wykonać kopii
+    syslog(LOG_INFO, "Z uzyciem mapowania skopiowano plik %s do miejsca %s", in, out);
+}
+
 int main(int argc, char* argv[])
 {
     if (argc < 2)
