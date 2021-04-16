@@ -77,44 +77,46 @@ utime() was successful. The file access and modification times are changed.
 -1
 utime() was not successful. The file times are not changed. The errno global variable is set to indicate the error.*/
 
-void Map(char* in, char* out)
+
+
+void copy_(char *in, char *out)
 {
-    /* mmap() creates a new mapping in the virtual address space of the
-       calling process.  The starting address for the new mapping is
-       specified in addr.  The length argument specifies the length of
-       the mapping (which must be greater than 0).*/
-    int size = FileSize(in);
-    int FileInput = open(in, O_RDONLY); //O_RDONLY Open for reading only.
-    int FileOutput = open(out, O_CREAT | O_WRONLY | O_TRUNC, 0644); /*If the file exists, this flag has no effect except as noted under O_EXCL below. Otherwise, the file shall be created O_WRONLY
-    Open for writing only. If the file exists and is a regular file, and the file is successfully opened O_RDWR or O_WRONLY, its length shall be truncated to 0, and the mode and owner shall be unchanged.*/
-
-    if (FileInput == -1 || FileOutput == -1)
+    char bufor[16];
+    int file_in, file_out;
+    int read_in, read_out;
+    //czytanie z pliku wejściowego READONLY
+    file_in = open(in, O_RDONLY)
+    // pisanie do pliku wyjściowego
+        //zgoda na tworzenie plików
+    file_out = open(out, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+    if(file_in == -1 || fileout == -1)
     {
-        syslog(LOG_ERR, "Blad otwarcia ktoregos z pliku!");
-        exit(EXIT_FAILURE);
+        syslog(LOG_ERR, "Błąd pliku podczas kopiowania/otwierania folderu");
     }
-    /*mmap() creates a new mapping in the virtual address space of the calling process.*/
-    char*mapowanie = (char*)mmap(0, size, PROT_READ, MAP_SHARED | MAP_FILE, FileInput, 0);
-    /*PROT_READ
-              Pages may be read.
-              
-      MAP_SHARED
-              Share this mapping.  Updates to the mapping are visible to
-              other processes mapping the same region
-              
-      MAP_FILE
-              Compatibility flag.*/
-
-    write(FileOutput, mapowanie, size);
-    //Mapowanie w miejsce buffora
-    close(FileInput);
-    close(FileOutput);
-    munmap(mapowanie, size); //usuwanie mapy z paamieci;
-    ChangeMod(in, out); //Zmiana daty modyfikacji, tak aby przy kolejnym obudzeniu nie trzeba było wykonać kopii
-    syslog(LOG_INFO, "Z uzyciem mapowania skopiowano plik %s do miejsca %s", in, out);
+    
+    //kopiowanie
+    //czytanie z read_in i zapisywanie write() do read_out
+    while((read_in = read(file_in, bufor, sizeof(bufor)))>0)
+    {
+    read_out = wirte(file_out, bufor, (size_t) read_in);
+        //jeśli dwa pliki się nie zgadzają
+        if(read_out != read_in)
+        {
+            //idk czy okej?
+            syslog(LOG_ERR, "Błąd w kopiowaniu pliku");
+            perror("Błąd w kopiowaniu pliku");
+            exit(EXIT_FAILURE);
+        }
+    }
+    //zamknięcie połączeń
+    close(file_in);
+    close(file_out);
+    //zmiana parametrów skopiowanego pliku
+    ChangeMod(in, out);
+    
+    //Odpowiedź jeśli wyszystko poszło zgodnie w planem
+    syslog(LOG_INFO, "Kopiowanie udane! Skopiowano %s", in);
 }
-
-
 
 int main(int argc, char* argv[])
 {
