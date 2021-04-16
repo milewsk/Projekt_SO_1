@@ -87,7 +87,12 @@ void copy_(char *in, char *out)
     //czytanie z pliku wejściowego READONLY
     file_in = open(in, O_RDONLY)
     // pisanie do pliku wyjściowego
-        //zgoda na tworzenie plików
+    //O_WRONLY - only writing
+    //O_CREAT | O_WRONLY | O_TRUNC
+    // CREAT = twórz jeśli nie istnieje taki plik
+    //O_TRUNC = the file is successfully opened O_RDWR or O_WRONLY,
+    //its length shall be truncated to 0, and the mode and owner shall be unchanged.
+    // 0644 - owner = może wszystko grupa = czytać, inni = czytać 
     file_out = open(out, O_CREAT | O_WRONLY | O_TRUNC, 0644);
     if(file_in == -1 || fileout == -1)
     {
