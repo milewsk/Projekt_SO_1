@@ -160,6 +160,40 @@ void Map(char* in, char* out)
     syslog(LOG_INFO, "Z uzyciem mapowania skopiowano plik %s do miejsca %s", in, out);
 }
 
+//fukcja działająca w dwie strony w zależności
+// jakie ścieżki podstawimy w odpowiednie miejsca
+// kiedy chcemy podmienić folder:
+// z folderu 2 -> folder 1 (uzupełnianie braków) (,folder2,folder1)
+// z folderu 1 -> folder 2 ( ,folder1, folder2)
+
+char *folder_replace(char* path, char* path_folder1, char* path_folder2)
+{
+    //
+    char* form_path = path + strlen(path_folder1);
+    //lokacja pamięci na nową scieżkę łącząc długosci podanych ścieżek
+    char* new_path = malloc(strlen(path_folder2)+strlen(form_path)+1);\
+//  ścieżka folder 2 na początek         
+    strcpy(new_path, path_folder2);
+//  doklejamy resztę
+    strcat(new_path, form_path);
+    return new_path;
+}
+
+// dodawanie brakujących elementów do ścieżki
+char *add_to_path(char *path, char *added)
+{
+//     alokacja pamięci dla 'added' = 2 aby pomieścić \0
+    char *new_path = malloc(strlen(path)+strlen(added)+2);
+//     na początek scieżka początkowa
+    strcpy(new_path,path);
+//  dodajemy '/'
+    strcat(new_path,"/");
+//     dodajemy nasz 'added'
+    strcat(new_path,added);
+//     na koniec dodajemy zakończenie
+    strcat(new_path,"\0")
+}
+
 int main(int argc, char* argv[])
 {
     if (argc < 2)
