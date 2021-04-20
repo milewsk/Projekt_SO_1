@@ -194,6 +194,76 @@ char *add_to_path(char *path, char *added)
     strcat(new_path,"\0")
 }
 
+// https://man7.org/linux/man-pages/man3/readdir.3.html
+// na podstawie tego
+void delete_(char* name_path_folder2, char*  path_folder1, char* path_folder2, bool if_R)
+{
+//  do sprawdzania typu i chodzenia głebiej w folderze
+    struct dirent* file;
+//     deklaracja dwóch nowych scieżek
+    DIR* path, *temp;
+// podstawienie w miejsce path scieżki forlderu2 za pomocą otworzenia
+    path = opendir(name_path_folder2);
+//     sprawdzenie czy scieżka jest faktycznie scieżką do folderu
+//     jeśli jest usuń folder
+    while(file = readdir(path)) 
+    {
+        if((file->d_type)==DT_DIR)
+        {
+            if(if_R)
+            {
+                if(!(strcmp(file->d_name,".")==0 || strcmp(file->d_name,"..")==0)) // jeśli jest dalsza część
+                {
+                    // utworzenie dalszej ścieżki
+                    char* new_path = add_to_path(name_path_folder2,file->d_name);
+                    // wywołanie rekurencujne usuwania
+                    delete_(new_path,path_folder1,path_folder2,if_R);
+                    
+                    // jeśli nie możemy odszukać dalszego folderu zgodnego z folderem 1 
+                    if(!(temp = opendir(folder_replace(new_path, path_folder2, path_folder1))))
+                    {
+                        if(remove(new_path) == 0)
+                        {
+                            syslog(LOG_ONFO, "USUNIĘTO katalog %s", new_path);
+                        }
+                        else
+                        {
+                            syslog(LOG_ERROR, "Błądy przy usuwaniu katalogu %s", new_path);
+                        }
+                    }
+                    else // jeśli wszystko się zgadza
+                    {
+                        closedir(temp);
+                    }
+                }
+            }
+    
+        }
+        else // jeśli nie mamy włączonej rekurencji usuń nierekurencujnie                   tu też czy to w tym miejscu
+        {
+            // dalsza ścieżka do katalogu
+            char* new_path = add_to_path(name_path_folder2, file->name)                                 // to dobrze na pewno???
+           
+                //spawdzamy czy damy radę zrobić replace == w obu katalogach jest folder
+                // jeśli nie to usuwamy zbędy katalog
+            if(access(folder_replace(new_path, path_folder2, path_folder1),F_OK)== -1)
+            {
+                  if(remove(new_path) == 0)
+                        {
+                            syslog(LOG_ONFO, "USUNIĘTO katalog %s", new_path);
+                        }
+                        else
+                        {
+                            syslog(LOG_ERROR, "Błądy przy usuwaniu katalogu %s", new_path);
+                        }
+                
+            }
+        }
+    }
+    // jeśli wszystko się zgadza - koniec usuwania
+closedir(path);
+}
+
 int main(int argc, char* argv[])
 {
     if (argc < 2)
