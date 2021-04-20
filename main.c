@@ -155,7 +155,7 @@ void Map(char* in, char* out)
     //Mapowanie w miejsce buffora
     close(FileInput);
     close(FileOutput);
-    munmap(mapowanie, size); //usuwanie mapy z paamieci;
+    munmap(mapowanie, size); //usuwanie mapy z pamieci;
     ChangeMod(in, out); //Zmiana daty modyfikacji, tak aby przy kolejnym obudzeniu nie trzeba było wykonać kopii
     syslog(LOG_INFO, "Z uzyciem mapowania skopiowano plik %s do miejsca %s", in, out);
 }
@@ -262,6 +262,54 @@ void delete_(char* name_path_folder2, char*  path_folder1, char* path_folder2, b
     }
     // jeśli wszystko się zgadza - koniec usuwania
 closedir(path);
+}
+
+void Compare(char* name_path, char* path_folder1, char* path_folder2) //porównywanie dwóch podanych katalogów, które są podawane jako argumenty
+{
+    bool result = 0; ///home/student/testy/folder1
+    char* name_path_var = name_path + strlen(path_folder1); //zmienna pomocnicza dla ścieżki pierwszego folderu
+    char* search_result_folder = malloc(strlen(name_path_var)); //to co będziemy dodawać/usuwać?
+    char* new_path = folder_replace(name_path, path_folder1, path_folder2); //Nowa ścieżka którą chcemy uzyskać na koniec   
+
+    int i = strlen(new_path);
+    //for (i; new_path[i] != '/'; i--); //Aż do roota dojdziemy?
+    //strcpy(search_result_folder, new_path + i + 1);
+    //new_path[i] = '\0';
+    struct dirent* file; /*struct dirent – struktura, która zawiera:
+    ino_t d_ino – numer i - węzła pliku
+    char d_name[] – nazwa pliku - TO NAS INTERESUJE*/
+    DIR* path; //DIR – struktura reprezentująca strumień katalogowy
+    path = opendir(new_path); //Otwiera strumień do katalogu znajdującego się pod ścieżką
+
+    while ((file = readdir(path))) //Zwraca wskaźnik do struktury reprezentującej plik w obecnej pozycji w strumieniu path i awansuje pozycję na następny plik w kolejce.
+    {
+        if (strcmp(file->d_name, search_result_folder) == 0)
+        {
+            free(search_result_folder);
+            if ((file->d_type) == DT_DIR)  //    GDY JEST FOLDEREM
+            {
+                return 0;
+            }
+            else
+            {
+                int time1 = (int)FileModificationData(name_path), time2 = (int)FileModificationData(add_to_path(new_path, file->d_name));
+                if (time1 == time2)
+                {
+                    return 0;
+                }
+                else
+                {
+                    return 1;
+                }
+            }
+        }
+        else
+        {
+            result = 1;
+        }
+    }
+    closedir(path);
+    return result;
 }
 
 int main(int argc, char* argv[])
