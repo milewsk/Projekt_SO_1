@@ -13,16 +13,17 @@
 #include <utime.h> //Pozwala programistom zmieniać i ustawiać datę dostępu oraz datę modyfikacji plików.
 #include <sys/mman.h> //Memory management - będzie potrzebne do mapowania plików void  *mmap(void *, size_t, int, int, int, off_t);
 
-/*Tutaj funkcje
+/*
 Potrzebne nam funkcje:
 Pobieranie czasu/rozmiaru/poziomu uprawnień
 Zmiana katalogów
 Usuwanie katalogów
-Sprawdzanie folderów. Pozycje które nie są zwykłymi plikami są ignorowane (np. katalogi i dowiązania symboliczne).*/
+Dodawanie folderów. Pozycje które nie są zwykłymi plikami są ignorowane (np. katalogi i dowiązania symboliczne).
+Porównywanie folderów między sobą(jeżeli chodzi o kwestię dodawania i usuwania*/
 
 
 //Źródło https://man7.org/linux/man-pages/man2/lstat.2.html
-off_t FileSize(const char* in)
+off_t GetFileSize(const char* in)
 {
     struct stat fsize;
     if (stat(in, &fsize) == 0)
@@ -33,7 +34,7 @@ off_t FileSize(const char* in)
         return -1;
 }
 
-mode_t FileTypeMode (const char* in)
+mode_t GetFileTypeMode (const char* in)
 {
     struct stat filetypemode;
     if (stat(in, &filetypemode) != -1)
@@ -64,7 +65,7 @@ void ChangeMod(char* in, char* out)
         syslog(LOG_ERR, "Blad zmiany daty!");
         exit(EXIT_FAILURE);
     }
-    mode_t OldFile = FileTypeMode(in);
+    mode_t OldFile = GetFileTypeMode(in);
     if (chmod(out, OldFile) != 0)
     {
         syslog(LOG_ERR, "Blad ustawienia uprawnien!");
@@ -129,7 +130,7 @@ void Map(char* in, char* out)
        calling process.  The starting address for the new mapping is
        specified in addr.  The length argument specifies the length of
        the mapping (which must be greater than 0).*/
-    int size = FileSize(in);
+    int size = GetFileSize(in);
     int FileInput = open(in, O_RDONLY); //O_RDONLY Open for reading only.
     int FileOutput = open(out, O_CREAT | O_WRONLY | O_TRUNC, 0644); /*If the file exists, this flag has no effect except as noted under O_EXCL below. Otherwise, the file shall be created O_WRONLY
     Open for writing only. If the file exists and is a regular file, and the file is successfully opened O_RDWR or O_WRONLY, its length shall be truncated to 0, and the mode and owner shall be unchanged.*/
@@ -162,10 +163,7 @@ void Map(char* in, char* out)
 
 //fukcja działająca w dwie strony w zależności
 // jakie ścieżki podstawimy w odpowiednie miejsca
-// kiedy chcemy podmienić folder:
-// z folderu 2 -> folder 1 (uzupełnianie braków) (,folder2,folder1)
-// z folderu 1 -> folder 2 ( ,folder1, folder2)
-
+//Kiedy chcemy zamienić folder, to znaczenie ma upozycjonowanie ich nazw w parametrach funkcji.
 char *folder_replace(char* path, char* path_folder1, char* path_folder2)
 {
     //
@@ -216,7 +214,7 @@ void delete_(char* name_path_folder2, char*  path_folder1, char* path_folder2, b
                 {
                     // utworzenie dalszej ścieżki
                     char* new_path = add_to_path(name_path_folder2,file->d_name);
-                    // wywołanie rekurencujne usuwania
+                    // wywołanie rekurencyjne usuwania
                     delete_(new_path,path_folder1,path_folder2,if_R);
                     
                     // jeśli nie możemy odszukać dalszego folderu zgodnego z folderem 1 
@@ -272,9 +270,9 @@ void Compare(char* name_path, char* path_folder1, char* path_folder2) //porówny
     char* new_path = folder_replace(name_path, path_folder1, path_folder2); //Nowa ścieżka którą chcemy uzyskać na koniec   
 
     int i = strlen(new_path);
-    //for (i; new_path[i] != '/'; i--); //Aż do roota dojdziemy?
-    //strcpy(search_result_folder, new_path + i + 1);
-    //new_path[i] = '\0';
+    for (i; new_path[i] != '/'; i--); 
+    strcpy(search_result_folder, new_path + i + 1);
+    new_path[i] = '\0';
     struct dirent* file; /*struct dirent – struktura, która zawiera:
     ino_t d_ino – numer i - węzła pliku
     char d_name[] – nazwa pliku - TO NAS INTERESUJE*/
@@ -310,6 +308,70 @@ void Compare(char* name_path, char* path_folder1, char* path_folder2) //porówny
     }
     closedir(path);
     return result;
+}
+
+void SIGUSSignal(int sig)
+{
+    syslog(LOG_INFO, "Wybudzenie demona przez sygnal SIGUSR1");
+}
+
+void AddDirectory(char* name_path1, char* folder_path1, char* folder_path2, bool if_R, int File_size)
+{
+    printf("Obecna ścieżka: %s\n", name_path1);
+    struct dirent* file;
+    DIR* path, *temp;
+    path = opendir(name_path1);
+    char* new_path;
+    while ((file = readdir(path)))
+    {
+        printf("%s  \n", file->d_name);
+        if ((file->d_type) == DT_DIR)  //    GDY JEST FOLDEREM
+        {
+            if (if_R)
+            {
+                if (!(strcmp(file->d_name, ".") == 0 || strcmp(file->d_name, "..") == 0))
+                {
+                    char* path_to_folder = folder_replace(add_to_path(name_path1, file->d_name), folder_path1, folder_path2);
+                    if (!(temp = opendir(path_to_folder)))
+                    {
+                        syslog(LOG_INFO, "Stworzono folder: %s", path_to_folder);
+                        mkdir(path_to_folder, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH); /*S_IRWXU
+                                                                                        read, write, execute/search by owner
+                                                                                        S_IRWXG
+                                                                                        read, write, execute/search by group
+                                                                                        S_IROTH
+                                                                                        read permission, others
+                                                                                        S_IXOTH
+                                                                                        execute/search permission, others*/
+                    }
+                    else
+                    {
+                        closedir(temp);
+                    }
+                    new_path = add_to_path(name_path1, file->d_name);
+                    AddDirectory(new_path, folder_path1, folder_path2, if_R, File_size);
+
+                }
+            }
+        }
+        else  if ((file->d_type) == DT_REG)// GDY nie jest folderem
+        {
+            new_path = add_to_path(name_path1, file->d_name);
+            int i;
+            if ((i = Compare(new_path, folder_path1, folder_path2)) == 1)
+            {
+                if (GetFileSize(new_path) > File_size)
+                {
+                    Map(new_path, folder_replace(new_path, folder_path1, folder_path2));
+                }
+                else
+                {
+                    copy_(new_path, folder_replace(new_path, folder_path1, folder_path2));
+                }
+            }
+        }
+    }
+    closedir(path);
 }
 
 int main(int argc, char* argv[])
@@ -432,24 +494,21 @@ int main(int argc, char* argv[])
             break;
         }
     }
-    
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+    syslog(LOG_INFO, "Demon do synchronizacji dwoch katalogow.");
+    if (signal(SIGUSR1, SIGUSSignal) == SIG_ERR)
+    {
+        syslog(LOG_ERR, "Blad sygnalu!");
+        exit(EXIT_FAILURE);
+    }
     
     //ciągła pętla while podczas działania deamona
     while(1)
     {
-        //potrzebne do funkcji: scieżki, rozmiar rekurencja true/false
-        
-        //usuwanie
-        // program porównuje folder 2 z folderem 1
-        // jeśli napotka niepotrzebne, niezgodne pliki usunie je
-        
-        
-        //porównanie
-        // program porównuje folder 1 i drugi
-        // dodaje brakujące pliki i foldery
-        
-        
-        
+        delete_(directory_path2, directory_path1, directory_path2, recursion)
+        AddDirectory(directory_path1, directory_path1, directory_path2, recursion, capacity)
         //odpoczynek na czas 'sleep_time'
         syslog(LOG_INFO,"Synchronizacja wykonana, pora odpocząć...")
         
