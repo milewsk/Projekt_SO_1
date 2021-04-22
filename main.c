@@ -507,8 +507,8 @@ int main(int argc, char* argv[])
     //ciągła pętla while podczas działania deamona
     while(1)
     {
-        delete_(directory_path2, directory_path1, directory_path2, recursion)
-        AddDirectory(directory_path1, directory_path1, directory_path2, recursion, capacity)
+        delete_(directory_path2, directory_path1, directory_path2, recursion);
+        AddDirectory(directory_path1, directory_path1, directory_path2, recursion, capacity);
         //odpoczynek na czas 'sleep_time'
         syslog(LOG_INFO,"Synchronizacja wykonana, pora odpocząć...")
         
