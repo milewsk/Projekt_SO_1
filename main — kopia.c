@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <signal.h> //przetwarzanie sygnałów
 #include <string.h>
+#include <system.h> //
 #include <unistd.h> //udostępnia makra i funkcje niezbędne do tworzenia programów, które muszą korzystać z pewnych usług systemu operacyjnego. getopt będzie z tego brany
 #include <sys/types.h> //zawiera definicje dla pid_t itd.
 #include <sys/stat.h> //The <sys/stat.h> header defines the structure of the data returned by the functions fstat(), lstat(), and stat().
@@ -58,7 +59,7 @@ void ChangeMod(char* in, char* out)
 {
     struct utimbuf time;
     time.actime = 0; ///* The new access time. access time - The last time the file was accessed/opened by some command or application*/
-    time.modtime = FileModificationData(in);/* The new modification time (modify time) - The last time the file's content was modified. */
+    time.modtime = FileModificationTime(in);/* The new modification time (modify time) - The last time the file's content was modified. */
     if (utime(out, &time) != 0)
     {
         syslog(LOG_ERR, "Blad zmiany daty!");
@@ -103,7 +104,7 @@ void copy_(char *in, char *out)
     //czytanie z read_in i zapisywanie write() do read_out
     while((read_in = read(file_in, bufor, sizeof(bufor)))>0)
     {
-    read_out = write(file_out, bufor, (size_t) read_in);
+    read_out = wirte(file_out, bufor, (size_t) read_in);
         //jeśli dwa pliki się nie zgadzają
         if(read_out != read_in)
         {
@@ -221,11 +222,11 @@ void delete_(char* name_path_folder2, char*  path_folder1, char* path_folder2, b
                     {
                         if(remove(new_path) == 0)
                         {
-                            syslog(LOG_INFO, "USUNIĘTO katalog %s", new_path);
+                            syslog(LOG_ONFO, "USUNIĘTO katalog %s", new_path);
                         }
                         else
                         {
-                            syslog(LOG_PERROR, "Błądy przy usuwaniu katalogu %s", new_path);
+                            syslog(LOG_ERROR, "Błądy przy usuwaniu katalogu %s", new_path);
                         }
                     }
                     else // jeśli wszystko się zgadza
@@ -239,7 +240,7 @@ void delete_(char* name_path_folder2, char*  path_folder1, char* path_folder2, b
         else // jeśli nie mamy włączonej rekurencji usuń nierekurencujnie                   tu też czy to w tym miejscu
         {
             // dalsza ścieżka do katalogu
-            char* new_path = add_to_path(name_path_folder2, file->d_name)                                 // to dobrze na pewno???
+            char* new_path = add_to_path(name_path_folder2, file->name)                                 // to dobrze na pewno???
            
                 //spawdzamy czy damy radę zrobić replace == w obu katalogach jest folder
                 // jeśli nie to usuwamy zbędy katalog
