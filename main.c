@@ -85,7 +85,7 @@ void copy_(char *in, char *out)
     int file_in, file_out;
     int read_in, read_out;
     //czytanie z pliku wejściowego READONLY
-    file_in = open(in, O_RDONLY)
+    file_in = open(in, O_RDONLY);
     // pisanie do pliku wyjściowego
     //O_WRONLY - only writing
     //O_CREAT | O_WRONLY | O_TRUNC
@@ -168,7 +168,7 @@ char *folder_replace(char* path, char* path_folder1, char* path_folder2)
     //
     char* form_path = path + strlen(path_folder1);
     //lokacja pamięci na nową scieżkę łącząc długosci podanych ścieżek
-    char* new_path = malloc(strlen(path_folder2)+strlen(form_path)+1);\
+    char* new_path = malloc(strlen(path_folder2)+strlen(form_path)+1);
 //  ścieżka folder 2 na początek         
     strcpy(new_path, path_folder2);
 //  doklejamy resztę
@@ -188,7 +188,7 @@ char *add_to_path(char *path, char *added)
 //     dodajemy nasz 'added'
     strcat(new_path,added);
 //     na koniec dodajemy zakończenie
-    strcat(new_path,"\0")
+    strcat(new_path,"\0");
 }
 
 // https://man7.org/linux/man-pages/man3/readdir.3.html
@@ -239,7 +239,7 @@ void delete_(char* name_path_folder2, char*  path_folder1, char* path_folder2, b
         else // jeśli nie mamy włączonej rekurencji usuń nierekurencujnie                   tu też czy to w tym miejscu
         {
             // dalsza ścieżka do katalogu
-            char* new_path = add_to_path(name_path_folder2, file->d_name)                                 // to dobrze na pewno???
+            char* new_path = add_to_path(name_path_folder2, file->d_name);                               // to dobrze na pewno???
            
                 //spawdzamy czy damy radę zrobić replace == w obu katalogach jest folder
                 // jeśli nie to usuwamy zbędy katalog
