@@ -447,7 +447,7 @@ int main(int argc, char* argv[])
                 //IFDIR - Sprawdzenie czy obiekt jest folderem
                 
                 // jeśli st_mode == IFdir, jeśli okej przypisz podany argument do zmiennej
-                if (S_IFDIR(s.st_mode) != 0) //lub s.st_mode & S_IFDIR
+                if ( s.st_mode & S_IFDIR) //lub S_IFDIR(s.st_mode) != 0
                 {
                     directory_path1 = optarg;
                 }
@@ -466,7 +466,7 @@ int main(int argc, char* argv[])
             if (stat(out, &s) == 0)
             {
                 //sprawdzenie czy obiekt jest katalogiem, jeśli okej przypisz podany argument do zmiennej
-                if (S_IFDIR(s.st_mode) != 0) 
+                if (s.st_mode & S_IFDIR) 
                 {
                     directory_path2 = optarg;
                 }
@@ -509,7 +509,7 @@ int main(int argc, char* argv[])
         delete_(directory_path2, directory_path1, directory_path2, recursion);
         AddDirectory(directory_path1, directory_path1, directory_path2, recursion, capacity);
         //odpoczynek na czas 'sleep_time'
-        syslog(LOG_INFO,"Synchronizacja wykonana, pora odpocząć...")
+        syslog(LOG_INFO,"Synchronizacja wykonana, pora odpocząć...");
         
         //przebudzienie
             // sleep()
@@ -519,7 +519,9 @@ int main(int argc, char* argv[])
         }
         
     }
+    closelog();
+    exit(EXIT_SUCCESS);
+    return 0;
     
     
-
 }
